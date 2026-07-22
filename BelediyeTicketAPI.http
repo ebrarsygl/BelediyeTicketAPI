@@ -1,0 +1,6 @@
+@BelediyeTicketAPI_HostAddress = http://localhost:5162
+
+GET {{BelediyeTicketAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
