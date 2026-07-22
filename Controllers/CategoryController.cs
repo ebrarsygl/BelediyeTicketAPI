@@ -1,8 +1,7 @@
 using BelediyeTicketAPI.DTOs.Category;
-using BelediyeTicketAPI.Data;
+using BelediyeTicketAPI.Interfaces;
 using BelediyeTicketAPI.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BelediyeTicketAPI.Controllers;
 
@@ -10,108 +9,103 @@ namespace BelediyeTicketAPI.Controllers;
 [Route("api/[controller]")]
 public class CategoryController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ICategoryService _service;
 
-    public CategoryController(ApplicationDbContext context)
+    public CategoryController(ICategoryService service)
     {
-        _context = context;
+        _service = service;
     }
 
     // Tüm kategorileri getir
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
     {
-    var categories = await _context.Categories
-        .Select(c => new CategoryDto
+        var categories = await _service.GetAllAsync();
+
+        var result = categories.Select(c => new CategoryDto
         {
             Id = c.Id,
             Name = c.Name
-        })
-        .ToListAsync();
+        });
 
-    return Ok(categories);
+        return Ok(result);
     }
 
     // Id'ye göre kategori getir
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetCategory(int id)
     {
-    var category = await _context.Categories.FindAsync(id);
-
-    if (category == null)
-    {
-        return NotFound();
-    }
-
-    var result = new CategoryDto
-    {
-        Id = category.Id,
-        Name = category.Name
-    };
-
-    return Ok(result);
-    }
-
-    // Yeni kategori ekle
-    [HttpPost]
-    public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto dto)
-    {
-    var category = new Category
-    {
-        Name = dto.Name
-    };
-
-    _context.Categories.Add(category);
-    await _context.SaveChangesAsync();
-
-    var result = new CategoryDto
-    {
-        Id = category.Id,
-        Name = category.Name
-    };
-
-    return CreatedAtAction(
-        nameof(GetCategory),
-        new { id = category.Id },
-        result);
-    }
-
-    // Kategoriyi güncelle
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto dto)
-{
-    if (id != dto.Id)
-    {
-        return BadRequest();
-    }
-
-    var category = await _context.Categories.FindAsync(id);
-
-    if (category == null)
-    {
-        return NotFound();
-    }
-
-    category.Name = dto.Name;
-
-    await _context.SaveChangesAsync();
-
-    return NoContent();
-}
-
-    // Kategoriyi sil
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteCategory(int id)
-    {
-        var category = await _context.Categories.FindAsync(id);
+        var category = await _service.GetByIdAsync(id);
 
         if (category == null)
         {
             return NotFound();
         }
 
-        _context.Categories.Remove(category);
-        await _context.SaveChangesAsync();
+        var result = new CategoryDto
+        {
+            Id = category.Id,
+            Name = category.Name
+        };
+
+        return Ok(result);
+    }
+
+    // Yeni kategori ekle
+    [HttpPost]
+    public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto dto)
+    {
+        var category = new Category
+        {
+            Name = dto.Name
+        };
+
+        await _service.CreateAsync(category);
+
+        var result = new CategoryDto
+        {
+            Id = category.Id,
+            Name = category.Name
+        };
+
+        return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, result);
+    }
+
+    // Kategori güncelle
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto dto)
+    {
+        if (id != dto.Id)
+        {
+            return BadRequest();
+        }
+
+        var category = await _service.GetByIdAsync(id);
+
+        if (category == null)
+        {
+            return NotFound();
+        }
+
+        category.Name = dto.Name;
+
+        await _service.UpdateAsync(category);
+
+        return NoContent();
+    }
+
+    // Kategori sil
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteCategory(int id)
+    {
+        var category = await _service.GetByIdAsync(id);
+
+        if (category == null)
+        {
+            return NotFound();
+        }
+
+        await _service.DeleteAsync(category);
 
         return NoContent();
     }

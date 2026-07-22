@@ -1,8 +1,7 @@
 using BelediyeTicketAPI.DTOs.Ticket;
-using BelediyeTicketAPI.Data;
+using BelediyeTicketAPI.Interfaces;
 using BelediyeTicketAPI.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BelediyeTicketAPI.Controllers;
 
@@ -10,19 +9,23 @@ namespace BelediyeTicketAPI.Controllers;
 [Route("api/[controller]")]
 public class TicketController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ITicketService _ticketService;
+    private readonly ICategoryService _categoryService;
 
-    public TicketController(ApplicationDbContext context)
+    public TicketController(
+        ITicketService ticketService,
+        ICategoryService categoryService)
     {
-        _context = context;
+        _ticketService = ticketService;
+        _categoryService = categoryService;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TicketDto>>> GetTickets()
     {
-    var tickets = await _context.Tickets
-        .Include(t => t.Category)
-        .Select(t => new TicketDto
+        var tickets = await _ticketService.GetAllAsync();
+
+        var result = tickets.Select(t => new TicketDto
         {
             Id = t.Id,
             Title = t.Title,
@@ -31,119 +34,114 @@ public class TicketController : ControllerBase
             CreatedDate = t.CreatedDate,
             CategoryId = t.CategoryId,
             CategoryName = t.Category!.Name
-        })
-        .ToListAsync();
+        });
 
-    return Ok(tickets);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<TicketDto>> GetTicket(int id)
     {
-    var ticket = await _context.Tickets
-        .Include(t => t.Category)
-        .FirstOrDefaultAsync(t => t.Id == id);
+        var ticket = await _ticketService.GetByIdAsync(id);
 
-    if (ticket == null)
-    {
-        return NotFound();
-    }
+        if (ticket == null)
+        {
+            return NotFound();
+        }
 
-    var result = new TicketDto
-    {
-        Id = ticket.Id,
-        Title = ticket.Title,
-        Description = ticket.Description,
-        Status = ticket.Status,
-        CreatedDate = ticket.CreatedDate,
-        CategoryId = ticket.CategoryId,
-        CategoryName = ticket.Category!.Name
-    };
+        var result = new TicketDto
+        {
+            Id = ticket.Id,
+            Title = ticket.Title,
+            Description = ticket.Description,
+            Status = ticket.Status,
+            CreatedDate = ticket.CreatedDate,
+            CategoryId = ticket.CategoryId,
+            CategoryName = ticket.Category!.Name
+        };
 
-    return Ok(result);
+        return Ok(result);
     }
 
     [HttpPost]
     public async Task<ActionResult<TicketDto>> CreateTicket(CreateTicketDto dto)
     {
-    var category = await _context.Categories.FindAsync(dto.CategoryId);
+        var category = await _categoryService.GetByIdAsync(dto.CategoryId);
 
-    if (category == null)
-    {
-        return BadRequest("Kategori bulunamadı.");
-    }
+        if (category == null)
+        {
+            return BadRequest("Kategori bulunamadı.");
+        }
 
-    var ticket = new Ticket
-    {
-        Title = dto.Title,
-        Description = dto.Description,
-        Status = "Beklemede",
-        CreatedDate = DateTime.UtcNow,
-        CategoryId = dto.CategoryId
-    };
+        var ticket = new Ticket
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            Status = "Beklemede",
+            CreatedDate = DateTime.UtcNow,
+            CategoryId = dto.CategoryId
+        };
 
-    _context.Tickets.Add(ticket);
-    await _context.SaveChangesAsync();
+        await _ticketService.CreateAsync(ticket);
 
-    var result = new TicketDto
-    {
-        Id = ticket.Id,
-        Title = ticket.Title,
-        Description = ticket.Description,
-        Status = ticket.Status,
-        CreatedDate = ticket.CreatedDate,
-        CategoryId = ticket.CategoryId,
-        CategoryName = category.Name
-    };
+        var result = new TicketDto
+        {
+            Id = ticket.Id,
+            Title = ticket.Title,
+            Description = ticket.Description,
+            Status = ticket.Status,
+            CreatedDate = ticket.CreatedDate,
+            CategoryId = ticket.CategoryId,
+            CategoryName = category.Name
+        };
 
-    return CreatedAtAction(nameof(GetTicket), new { id = ticket.Id }, result);
+        return CreatedAtAction(nameof(GetTicket), new { id = ticket.Id }, result);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTicket(int id, UpdateTicketDto dto)
     {
-    if (id != dto.Id)
-    {
-        return BadRequest();
+        if (id != dto.Id)
+        {
+            return BadRequest();
+        }
+
+        var ticket = await _ticketService.GetByIdAsync(id);
+
+        if (ticket == null)
+        {
+            return NotFound();
+        }
+
+        var category = await _categoryService.GetByIdAsync(dto.CategoryId);
+
+        if (category == null)
+        {
+            return BadRequest("Kategori bulunamadı.");
+        }
+
+        ticket.Title = dto.Title;
+        ticket.Description = dto.Description;
+        ticket.Status = dto.Status;
+        ticket.CategoryId = dto.CategoryId;
+
+        await _ticketService.UpdateAsync(ticket);
+
+        return NoContent();
     }
 
-    var ticket = await _context.Tickets.FindAsync(id);
-
-    if (ticket == null)
-    {
-        return NotFound();
-    }
-
-    var category = await _context.Categories.FindAsync(dto.CategoryId);
-
-    if (category == null)
-    {
-        return BadRequest("Kategori bulunamadı.");
-    }
-
-    ticket.Title = dto.Title;
-    ticket.Description = dto.Description;
-    ticket.Status = dto.Status;
-    ticket.CategoryId = dto.CategoryId;
-
-    await _context.SaveChangesAsync();
-
-    return NoContent();
-    }
-    
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTicket(int id)
     {
-    var ticket = await _context.Tickets.FindAsync(id);
+        var ticket = await _ticketService.GetByIdAsync(id);
 
-    if (ticket == null)
-    {
-        return NotFound();
-    }
+        if (ticket == null)
+        {
+            return NotFound();
+        }
 
-    _context.Tickets.Remove(ticket);
-    await _context.SaveChangesAsync();
+        await _ticketService.DeleteAsync(ticket);
 
-    return NoContent();
+        return NoContent();
     }
 }
