@@ -14,11 +14,33 @@ public class TicketRepository : ITicketRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Ticket>> GetAllAsync()
+    public async Task<IEnumerable<Ticket>> GetAllAsync(
+    string? search,
+    string? status,
+    int? categoryId)
     {
-        return await _context.Tickets
-            .Include(t => t.Category)
-            .ToListAsync();
+    var query = _context.Tickets
+        .Include(t => t.Category)
+        .AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        query = query.Where(t =>
+            t.Title.Contains(search) ||
+            t.Description.Contains(search));
+    }
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        query = query.Where(t => t.Status == status);
+    }
+
+    if (categoryId.HasValue)
+    {
+        query = query.Where(t => t.CategoryId == categoryId.Value);
+    }
+
+    return await query.ToListAsync();
     }
 
     public async Task<Ticket?> GetByIdAsync(int id)

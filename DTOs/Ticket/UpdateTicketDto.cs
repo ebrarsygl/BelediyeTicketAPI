@@ -19,4 +19,7 @@ public class UpdateTicketDto
 
     [Required(ErrorMessage = "Kategori seçilmelidir.")]
     public int CategoryId { get; set; }
+
+    [Required(ErrorMessage = "Kullanıcı seçilmelidir.")]
+    public int UserId { get; set; }      // EKLE
 }

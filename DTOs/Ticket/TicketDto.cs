@@ -15,4 +15,6 @@ public class TicketDto
     public int CategoryId { get; set; }
 
     public string CategoryName { get; set; } = string.Empty;
+
+    public int UserId { get; set; }      // EKLE
 }

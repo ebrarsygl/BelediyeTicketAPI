@@ -4,7 +4,10 @@ namespace BelediyeTicketAPI.Interfaces;
 
 public interface ITicketRepository
 {
-    Task<IEnumerable<Ticket>> GetAllAsync();
+    Task<IEnumerable<Ticket>> GetAllAsync(
+    string? search,
+    string? status,
+    int? categoryId);
 
     Task<Ticket?> GetByIdAsync(int id);
 

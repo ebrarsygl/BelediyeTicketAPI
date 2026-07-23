@@ -1,16 +1,16 @@
-using BelediyeTicketAPI.Models;
+using BelediyeTicketAPI.DTOs.Ticket;
 
 namespace BelediyeTicketAPI.Interfaces;
 
 public interface ITicketService
 {
-    Task<IEnumerable<Ticket>> GetAllAsync();
+    Task<IEnumerable<TicketDto>> GetAllAsync();
 
-    Task<Ticket?> GetByIdAsync(int id);
+    Task<TicketDto?> GetByIdAsync(int id);
 
-    Task<Ticket> CreateAsync(Ticket ticket);
+    Task<TicketDto> CreateAsync(CreateTicketDto dto);
 
-    Task UpdateAsync(Ticket ticket);
+    Task<bool> UpdateAsync(int id, UpdateTicketDto dto);
 
-    Task DeleteAsync(Ticket ticket);
+    Task<bool> DeleteAsync(int id);
 }

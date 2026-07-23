@@ -1,11 +1,11 @@
 using AutoMapper;
 using BelediyeTicketAPI.Mappings;
-using BelediyeTicketAPI.Interfaces;
 using BelediyeTicketAPI.Repositories;
-using BelediyeTicketAPI.Services;
 using BelediyeTicketAPI.Data;
 using BelediyeTicketAPI.Middleware;
 using Microsoft.EntityFrameworkCore;
+using BelediyeTicketAPI.Interfaces;
+using BelediyeTicketAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,10 +15,13 @@ builder.Services.AddControllers();
 // Repository
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Service
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -35,12 +38,14 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();   // <-- EKLE
+
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Global Exception Middleware
-app.UseMiddleware<ExceptionMiddleware>();
+// Geçici olarak kapatıyoruz.
+// app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 

@@ -1,8 +1,6 @@
-using AutoMapper;
 using BelediyeTicketAPI.DTOs.Ticket;
 using BelediyeTicketAPI.Helpers;
 using BelediyeTicketAPI.Interfaces;
-using BelediyeTicketAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BelediyeTicketAPI.Controllers;
@@ -12,34 +10,25 @@ namespace BelediyeTicketAPI.Controllers;
 public class TicketController : ControllerBase
 {
     private readonly ITicketService _ticketService;
-    private readonly ICategoryService _categoryService;
-    private readonly IMapper _mapper;
 
-    public TicketController(
-        ITicketService ticketService,
-        ICategoryService categoryService,
-        IMapper mapper)
+    public TicketController(ITicketService ticketService)
     {
         _ticketService = ticketService;
-        _categoryService = categoryService;
-        _mapper = mapper;
     }
 
-    // Tüm talepleri getir
+    // GET: api/Ticket
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IEnumerable<TicketDto>>>> GetTickets()
     {
         var tickets = await _ticketService.GetAllAsync();
 
-        var result = _mapper.Map<IEnumerable<TicketDto>>(tickets);
-
         return Ok(new ApiResponse<IEnumerable<TicketDto>>(
             true,
             "Talepler başarıyla getirildi.",
-            result));
+            tickets));
     }
 
-    // Id'ye göre talep getir
+    // GET: api/Ticket/5
     [HttpGet("{id}")]
     public async Task<ActionResult<ApiResponse<TicketDto>>> GetTicket(int id)
     {
@@ -53,15 +42,13 @@ public class TicketController : ControllerBase
                 null));
         }
 
-        var result = _mapper.Map<TicketDto>(ticket);
-
         return Ok(new ApiResponse<TicketDto>(
             true,
             "Talep başarıyla getirildi.",
-            result));
+            ticket));
     }
 
-    // Yeni talep oluştur
+    // POST: api/Ticket
     [HttpPost]
     public async Task<ActionResult<ApiResponse<TicketDto>>> CreateTicket(CreateTicketDto dto)
     {
@@ -73,36 +60,18 @@ public class TicketController : ControllerBase
                 ModelState));
         }
 
-        var category = await _categoryService.GetByIdAsync(dto.CategoryId);
-
-        if (category == null)
-        {
-            return BadRequest(new ApiResponse<object>(
-                false,
-                "Kategori bulunamadı.",
-                null));
-        }
-
-        var ticket = _mapper.Map<Ticket>(dto);
-
-        ticket.Status = "Beklemede";
-        ticket.CreatedDate = DateTime.UtcNow;
-
-        await _ticketService.CreateAsync(ticket);
-
-        var result = _mapper.Map<TicketDto>(ticket);
-        result.CategoryName = category.Name;
+        var createdTicket = await _ticketService.CreateAsync(dto);
 
         return CreatedAtAction(
             nameof(GetTicket),
-            new { id = ticket.Id },
+            new { id = createdTicket.Id },
             new ApiResponse<TicketDto>(
                 true,
                 "Talep başarıyla oluşturuldu.",
-                result));
+                createdTicket));
     }
 
-    // Talep güncelle
+    // PUT: api/Ticket/5
     [HttpPut("{id}")]
     public async Task<ActionResult<ApiResponse<object>>> UpdateTicket(int id, UpdateTicketDto dto)
     {
@@ -114,37 +83,15 @@ public class TicketController : ControllerBase
                 ModelState));
         }
 
-        if (id != dto.Id)
-        {
-            return BadRequest(new ApiResponse<object>(
-                false,
-                "Id bilgisi uyuşmuyor.",
-                null));
-        }
+        var updated = await _ticketService.UpdateAsync(id, dto);
 
-        var ticket = await _ticketService.GetByIdAsync(id);
-
-        if (ticket == null)
+        if (!updated)
         {
             return NotFound(new ApiResponse<object>(
                 false,
                 "Talep bulunamadı.",
                 null));
         }
-
-        var category = await _categoryService.GetByIdAsync(dto.CategoryId);
-
-        if (category == null)
-        {
-            return BadRequest(new ApiResponse<object>(
-                false,
-                "Kategori bulunamadı.",
-                null));
-        }
-
-        _mapper.Map(dto, ticket);
-
-        await _ticketService.UpdateAsync(ticket);
 
         return Ok(new ApiResponse<object>(
             true,
@@ -152,21 +99,19 @@ public class TicketController : ControllerBase
             null));
     }
 
-    // Talep sil
+    // DELETE: api/Ticket/5
     [HttpDelete("{id}")]
     public async Task<ActionResult<ApiResponse<object>>> DeleteTicket(int id)
     {
-        var ticket = await _ticketService.GetByIdAsync(id);
+        var deleted = await _ticketService.DeleteAsync(id);
 
-        if (ticket == null)
+        if (!deleted)
         {
             return NotFound(new ApiResponse<object>(
                 false,
                 "Talep bulunamadı.",
                 null));
         }
-
-        await _ticketService.DeleteAsync(ticket);
 
         return Ok(new ApiResponse<object>(
             true,
